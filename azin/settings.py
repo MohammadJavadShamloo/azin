@@ -41,7 +41,13 @@ DJANGO_APPS = [
     'django.contrib.staticfiles',
 ]
 
-THIRD_PARTY_APPS = []
+THIRD_PARTY_APPS = [
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'crispy_forms',
+    'crispy_bootstrap5',
+]
 
 SELF_DEFINED_APPS = []
 
@@ -55,6 +61,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 ROOT_URLCONF = 'azin.urls'
@@ -62,6 +69,7 @@ ROOT_URLCONF = 'azin.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -123,8 +131,39 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = 'static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
+ACCOUNT_CHANGE_EMAIL = True
+ACCOUNT_EMAIL_REQUIRED = False
+ACCOUNT_EMAIL_VERIFICATION = 'none'
+ACCOUNT_LOGIN_ON_PASSWORD_RESET = True
+ACCOUNT_LOGIN_TIMEOUT = 3600
+ACCOUNT_SESSION_REMEMBER = True
+ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = True
+ACCOUNT_SIGNUP_EMAIL_ENTER_TWICE = False
+ACCOUNT_LOGIN_ON_SIGNUP = True
+ACCOUNT_USERNAME_MIN_LENGTH = 8
+ACCOUNT_USERNAME_REQUIRED = True
+ACCOUNT_RATE_LIMITS = {
+    "login": "5/m",
+    "signup": "3/h",
+    "reset_password": "5/m",
+    "set_password": "5/m",
+    "change_password": "5/m",
+    "manage_email": "5/m",
+}
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+S3_ENDPOINT_URL = env.str('S3_ENDPOINT_URL')
+S3_ACCESS_KEY_ID = env.str('S3_ACCESS_KEY_ID')
+S3_SECRET_ACCESS_KEY = env.str('S3_SECRET_ACCESS_KEY')

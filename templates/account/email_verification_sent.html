@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Email Verification Sent{% endblock %}
+
+{% block content %}
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <h2>Email Verification Sent</h2>
+            <p>We've sent an email to {{ email }}. Please check your inbox and follow the instructions to verify your
+                email address.</p>
+            <p>If you did not receive the email, you can <a
+                    href="{% url 'account_email_verification_sent' %}?email={{ email }}">resend the verification
+                email</a>.</p>
+        </div>
+    </div>
+{% endblock %}

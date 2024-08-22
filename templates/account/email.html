@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load crispy_forms_filters %}
+
+{% block title %}Manage Emails{% endblock %}
+
+{% block content %}
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <h2>Manage Email Addresses</h2>
+            <form method="POST" class="form-group">
+                {% csrf_token %}
+                {{ form|crispy }}
+                <button type="submit" class="btn btn-primary">Add Email</button>
+            </form>
+            <h3 class="mt-4">Your Email Addresses</h3>
+            <ul class="list-group">
+                {% for email in email_addresses %}
+                    <li class="list-group-item">
+                        {{ email.email }} {% if email.primary %}(Primary){% endif %}
+                        {% if not email.verified %}
+                            -<a href="{% url 'account_email_verification_sent' %}?email={{ email.email }}">Resend
+                            verification</a>
+                        {% else %}
+                            - Verified
+                        {% endif %}
+                        <form method="POST" action="{% url 'account_email_remove' %}" class="d-inline ms-3">
+                            {% csrf_token %}
+                            <input type="hidden" name="email" value="{{ email.email }}">
+                            <button type="submit" class="btn btn-sm btn-danger">Remove</button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+{% endblock %}

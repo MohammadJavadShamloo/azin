@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Confirm Email{% endblock %}
+
+{% block content %}
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <h2>Confirm Your Email Address</h2>
+            {% if confirmation %}
+                <p>Your email address has been successfully confirmed. You can now <a href="{% url 'account_login' %}">log
+                    in</a>.</p>
+            {% else %}
+                <p>The email confirmation link is invalid or has expired. Please request a new one.</p>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
