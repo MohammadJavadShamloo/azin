@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
-
+from cmreslogging.handlers import CMRESHandler
 from environ import Env
 from pathlib import Path
 
@@ -49,7 +49,9 @@ THIRD_PARTY_APPS = [
     'crispy_bootstrap5',
 ]
 
-SELF_DEFINED_APPS = []
+SELF_DEFINED_APPS = [
+    'storage.apps.StorageConfig'
+]
 
 INSTALLED_APPS = DJANGO_APPS + SELF_DEFINED_APPS + THIRD_PARTY_APPS
 
@@ -167,3 +169,56 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 S3_ENDPOINT_URL = env.str('S3_ENDPOINT_URL')
 S3_ACCESS_KEY_ID = env.str('S3_ACCESS_KEY_ID')
 S3_SECRET_ACCESS_KEY = env.str('S3_SECRET_ACCESS_KEY')
+
+ES_HOST = env.str('ES_HOST')
+ES_PORT = env.str('ES_PORT')
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+        },
+        'audit_elasticsearch': {
+            'level': 'INFO',
+            'class': 'cmreslogging.handlers.CMRESHandler',
+            'hosts': [{'host': ES_HOST, 'port': ES_PORT}],
+            'auth_type': CMRESHandler.AuthType.NO_AUTH,
+            'es_index_name': 'audit-logs',
+            'use_ssl': False,
+            'raise_on_indexing_exceptions': True,
+        },
+        'error_elasticsearch': {
+            'level': 'ERROR',
+            'class': 'cmreslogging.handlers.CMRESHandler',
+            'hosts': [{'host': ES_HOST, 'port': ES_PORT}],
+            'auth_type': CMRESHandler.AuthType.NO_AUTH,
+            'es_index_name': 'error-logs',
+            'use_ssl': False,
+            'raise_on_indexing_exceptions': True,
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'error_elasticsearch'],
+            'level': 'ERROR',
+            'propagate': True,
+        },
+        'audit': {
+            'handlers': ['audit_elasticsearch', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'error_logger': {
+            'handlers': ['error_elasticsearch', 'console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',
+    },
+}
