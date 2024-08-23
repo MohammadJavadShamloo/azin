@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}List Files{% endblock %}
+
+{% block content %}
+    <h2>Files in S3 Bucket</h2>
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>File Name</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for file in files %}
+            <tr>
+                <td>{{ file }}</td>
+                <td>
+                    <a href="{% url 'download_file' file %}" class="btn btn-primary">Download</a>
+                    <a href="{% url 'delete_file' file %}" class="btn btn-danger">Delete</a>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <a href="{% url 'upload_file' %}" class="btn btn-success">Upload New File</a>
+{% endblock %}

@@ -1,7 +1,5 @@
 import logging
-
 from botocore.exceptions import BotoCoreError, ClientError
-
 from storage import boto_client
 from storage.error_map import ERROR_MAP, DEFAULT_ERROR_MESSAGE
 
@@ -117,4 +115,116 @@ class S3Facade:
         except BotoCoreError as e:
             error_logger.error(
                 f"Failed to generate presigned URL for {object_name} in bucket {bucket_name}: {str(e)}")
+            raise
+
+    def create_link(self, bucket_name, source_object_name, target_object_name):
+        """Create a metadata-based symbolic link (reference) to another file within the same bucket."""
+        try:
+            # Retrieve the original object's metadata (optional, for reference purposes)
+            original_metadata = self.s3_client.head_object(
+                Bucket=bucket_name,
+                Key=source_object_name
+            )['Metadata']
+
+            # Create the link object with metadata pointing to the original object
+            self.s3_client.put_object(
+                Bucket=bucket_name,
+                Key=target_object_name,
+                Metadata={'original-key': source_object_name}
+            )
+            audit_logger.info(
+                f"Metadata-based link created from {source_object_name} to {target_object_name} in bucket {bucket_name}")
+            return f"{bucket_name}/{target_object_name}"
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            error_message = S3Facade.get_error_message(error_code)
+            error_logger.error(
+                f"Failed to create metadata link from {source_object_name} to {target_object_name} in bucket {bucket_name}: {error_message} "
+                f"(Error Code: {error_code})")
+            raise Exception(
+                f"Failed to create metadata link from '{source_object_name}' to '{target_object_name}'. {error_message}")
+        except BotoCoreError as e:
+            error_logger.error(
+                f"Failed to create metadata link from {source_object_name} to {target_object_name} in bucket {bucket_name}: {str(e)}")
+            raise
+
+    def resolve_link(self, bucket_name, target_object_name):
+        """Resolve a metadata-based link to get the original object's key."""
+        try:
+            response = self.s3_client.head_object(
+                Bucket=bucket_name,
+                Key=target_object_name
+            )
+            original_key = response['Metadata'].get('original-key')
+            if original_key:
+                audit_logger.info(
+                    f"Resolved link {target_object_name} to original object {original_key} in bucket {bucket_name}")
+                return original_key
+            else:
+                error_logger.error(f"No link metadata found for {target_object_name} in bucket {bucket_name}")
+                raise Exception(f"No link metadata found for '{target_object_name}' in bucket '{bucket_name}'")
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            error_message = S3Facade.get_error_message(error_code)
+            error_logger.error(
+                f"Failed to resolve link {target_object_name} in bucket {bucket_name}: {error_message} "
+                f"(Error Code: {error_code})")
+            raise Exception(
+                f"Failed to resolve link for '{target_object_name}'. {error_message}")
+        except BotoCoreError as e:
+            error_logger.error(
+                f"Failed to resolve link {target_object_name} in bucket {bucket_name}: {str(e)}")
+            raise
+
+    def upload_object_body(self, object_name, body, bucket_name=None):
+        """Upload an object body to S3."""
+        try:
+            bucket_name = bucket_name or self.s3_client.bucket_name
+            self.s3_client.put_object(Bucket=bucket_name, Key=object_name, Body=body)
+            audit_logger.info(f"Uploaded object body to {bucket_name}/{object_name}")
+            return f"{bucket_name}/{object_name}"
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            error_message = self.get_error_message(error_code)
+            error_logger.error(f"Failed to upload object body to {bucket_name}/{object_name}: {error_message} "
+                               f"(Error Code: {error_code})")
+            raise Exception(f"Failed to upload object body to '{bucket_name}/{object_name}'. {error_message}")
+        except BotoCoreError as e:
+            error_logger.error(f"Failed to upload object body to {bucket_name}/{object_name}: {str(e)}")
+            raise
+
+    def get_object_body(self, object_name, bucket_name=None):
+        """Get the body/content of an S3 object."""
+        try:
+            bucket_name = bucket_name or self.s3_client.bucket_name
+            response = self.s3_client.get_object(Bucket=bucket_name, Key=object_name)
+            body = response['Body'].read()
+            audit_logger.info(f"Retrieved object body from {bucket_name}/{object_name}")
+            return body
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            error_message = self.get_error_message(error_code)
+            error_logger.error(f"Failed to get object body from {bucket_name}/{object_name}: {error_message} "
+                               f"(Error Code: {error_code})")
+            raise Exception(f"Failed to get object body from '{bucket_name}/{object_name}'. {error_message}")
+        except BotoCoreError as e:
+            error_logger.error(f"Failed to get object body from {bucket_name}/{object_name}: {str(e)}")
+            raise
+
+    def get_object_metadata(self, object_name, bucket_name=None):
+        """Retrieve metadata of an S3 object."""
+        try:
+            bucket_name = bucket_name or self.s3_client.bucket_name
+            response = self.s3_client.head_object(Bucket=bucket_name, Key=object_name)
+            metadata = response.get('Metadata', {})
+            audit_logger.info(f"Retrieved metadata from {bucket_name}/{object_name}")
+            return metadata
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            error_message = self.get_error_message(error_code)
+            error_logger.error(f"Failed to get metadata from {bucket_name}/{object_name}: {error_message} "
+                               f"(Error Code: {error_code})")
+            raise Exception(f"Failed to get metadata from '{bucket_name}/{object_name}'. {error_message}")
+        except BotoCoreError as e:
+            error_logger.error(f"Failed to get metadata from {bucket_name}/{object_name}: {str(e)}")
             raise

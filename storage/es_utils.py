@@ -1,6 +1,7 @@
 import logging
 from elasticsearch import Elasticsearch, NotFoundError, ApiError
 from django.conf import settings
+from es_mappings import ES_SETTINGS
 
 audit_logger = logging.getLogger('audit')
 error_logger = logging.getLogger('error_logger')
@@ -9,23 +10,21 @@ error_logger = logging.getLogger('error_logger')
 class ElasticsearchFacade:
     def __init__(self):
         try:
-            self.es_client = Elasticsearch(hosts=settings.ELASTICSEARCH_HOSTS)
+            self.es_client = Elasticsearch(hosts=settings.ES_HOST)
             audit_logger.info("Initialized Elasticsearch client.")
         except ApiError as e:
             error_logger.error(f"Failed to initialize Elasticsearch client: {str(e)}")
             raise
 
-    def create_index(self, index_name, settings=None, mappings=None):
+    def create_index(self, index_name, es_settings=ES_SETTINGS, es_mappings=None):
         """Create an index in Elasticsearch."""
         try:
-            body = {}
-            if settings:
-                body['settings'] = settings
-            if mappings:
-                body['mappings'] = mappings
+            body = {'settings': es_settings}
+            if es_mappings:
+                body['mappings'] = es_mappings
 
-            response = self.es_client.indices.create(index=index_name, body=body, ignore=400)
-            audit_logger.info(f"Index '{index_name}' created with settings: {settings}, mappings: {mappings}")
+            response = self.es_client.indices.create(index=index_name, body=body)
+            audit_logger.info(f"Index '{index_name}' created with settings: {es_settings}, mappings: {es_mappings}")
             return response
         except ApiError as e:
             error_logger.error(f"Failed to create index '{index_name}': {str(e)}")
