@@ -1,0 +1,22 @@
+{% if user.is_authenticated %}
+    <div id="chat-tab" class="chat-tab">
+        <div id="chat-tab-header" class="chat-tab-header">
+            <button id="chat-toggle" class="btn btn-primary">Messenger</button>
+        </div>
+        <div id="chat-content" class="chat-content">
+            <div id="recipient-select" class="mb-3">
+                <label for="recipient" class="form-label">Select Recipient:</label>
+                <select id="recipient" class="form-select">
+                    <!-- Add recipient options here -->
+                </select>
+            </div>
+            <div id="chat-messages" class="chat-messages">
+                <!-- Messages will be dynamically inserted here -->
+            </div>
+            <div id="chat-input" class="chat-input mt-2">
+                <input type="text" id="message-input" class="form-control" placeholder="Type a message">
+                <button id="send-message" class="btn btn-success mt-2">Send</button>
+            </div>
+        </div>
+    </div>
+{% endif %}

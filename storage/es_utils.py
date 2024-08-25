@@ -1,16 +1,18 @@
 import logging
-from elasticsearch import Elasticsearch, NotFoundError, ApiError
-from django.conf import settings
-from es_mappings import ES_SETTINGS
 
-audit_logger = logging.getLogger('audit')
+from elasticsearch import Elasticsearch, NotFoundError, ApiError
+
+from azin.settings import ES_HOST, ES_PORT
+from storage.es_mappings import ES_SETTINGS
+
+audit_logger = logging.getLogger('audit_logger')
 error_logger = logging.getLogger('error_logger')
 
 
 class ElasticsearchFacade:
     def __init__(self):
         try:
-            self.es_client = Elasticsearch(hosts=settings.ES_HOST)
+            self.es_client = Elasticsearch(hosts=f'http://{ES_HOST}:{ES_PORT}')
             audit_logger.info("Initialized Elasticsearch client.")
         except ApiError as e:
             error_logger.error(f"Failed to initialize Elasticsearch client: {str(e)}")
@@ -104,7 +106,6 @@ class ElasticsearchFacade:
                 action = {
                     "_op_type": "index",
                     "_index": index_name,
-                    "_id": document.get('_id'),
                     "_source": document.get('doc')
                 }
                 actions.append(action)

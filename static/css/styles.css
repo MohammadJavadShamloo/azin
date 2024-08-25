@@ -1,0 +1,31 @@
+.chat-tab {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    width: 300px;
+    display: none;
+    z-index: 1000;
+}
+
+.chat-tab-header {
+    background-color: #007bff;
+    padding: 10px;
+    color: white;
+    cursor: pointer;
+}
+
+.chat-content {
+    background-color: #f8f9fa;
+    border: 1px solid #007bff;
+    padding: 10px;
+}
+
+.chat-messages {
+    height: 200px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+}
+
+.chat-input input {
+    width: 100%;
+}

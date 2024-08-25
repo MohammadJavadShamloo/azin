@@ -2,11 +2,15 @@ from django.views.generic import ListView, CreateView, DeleteView, View
 from django.shortcuts import render, redirect
 from django.urls import reverse_lazy
 from django.http import HttpResponse, HttpResponseNotFound
-from storage_utils import StorageFacade
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
+from storage.storage_utils import StorageFacade
 import os
 
 storage_facade = StorageFacade()
 
+
+@method_decorator(login_required, name='dispatch')
 class FileListView(ListView):
     template_name = 'storage/list_files.html'
     context_object_name = 'files'
@@ -16,7 +20,8 @@ class FileListView(ListView):
         return storage_facade.list_files(bucket_name)
 
 
-class FileUploadView(CreateView):
+@method_decorator(login_required, name='dispatch')
+class FileUploadView(View):
     template_name = 'storage/upload_file.html'
 
     def post(self, request, *args, **kwargs):
@@ -33,7 +38,11 @@ class FileUploadView(CreateView):
 
         return redirect('list_files')
 
+    def get(self, request, *args, **kwargs):
+        return render(request, self.template_name)
 
+
+@method_decorator(login_required, name='dispatch')
 class FileDownloadView(View):
     def get(self, request, file_hash, *args, **kwargs):
         try:
@@ -48,6 +57,7 @@ class FileDownloadView(View):
             return HttpResponseNotFound(f"File not found: {str(e)}")
 
 
+@method_decorator(login_required, name='dispatch')
 class FileDeleteView(DeleteView):
     template_name = 'storage/delete_file.html'
     success_url = reverse_lazy('list_files')

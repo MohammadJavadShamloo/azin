@@ -9,9 +9,10 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
-from cmreslogging.handlers import CMRESHandler
 from environ import Env
 from pathlib import Path
+
+from storage.es_mappings import AUDIT_LOG_MAPPING, ERROR_LOG_MAPPING
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -47,6 +48,7 @@ THIRD_PARTY_APPS = [
     'allauth.socialaccount',
     'crispy_forms',
     'crispy_bootstrap5',
+    'channels',
 ]
 
 SELF_DEFINED_APPS = [
@@ -85,6 +87,8 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'azin.wsgi.application'
+
+ASGI_APPLICATION = 'azin.asgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
@@ -149,7 +153,9 @@ ACCOUNT_LOGIN_TIMEOUT = 3600
 ACCOUNT_SESSION_REMEMBER = True
 ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = True
 ACCOUNT_SIGNUP_EMAIL_ENTER_TWICE = False
-ACCOUNT_LOGIN_ON_SIGNUP = True
+ACCOUNT_LOGIN_ON_SIGNUP = False
+ACCOUNT_LOGOUT_ON_GET = True
+ACCOUNT_LOGOUT_ON_PASSWORD_CHANGE = True
 ACCOUNT_USERNAME_MIN_LENGTH = 8
 ACCOUNT_USERNAME_REQUIRED = True
 ACCOUNT_RATE_LIMITS = {
@@ -176,28 +182,33 @@ ES_PORT = env.str('ES_PORT')
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '%(levelname)s %(asctime)s %(module)s %(message)s'
+        },
+        'simple': {
+            'format': '%(levelname)s %(message)s'
+        },
+    },
     'handlers': {
         'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
+            'formatter': 'simple',
         },
         'audit_elasticsearch': {
             'level': 'INFO',
-            'class': 'cmreslogging.handlers.CMRESHandler',
-            'hosts': [{'host': ES_HOST, 'port': ES_PORT}],
-            'auth_type': CMRESHandler.AuthType.NO_AUTH,
-            'es_index_name': 'audit-logs',
-            'use_ssl': False,
-            'raise_on_indexing_exceptions': True,
+            'class': 'storage.log_handlers.AuditLogElasticsearchHandler',
+            'formatter': 'verbose',
+            'index_name': 'audit-logs',
+            'mapping': AUDIT_LOG_MAPPING,
         },
         'error_elasticsearch': {
             'level': 'ERROR',
-            'class': 'cmreslogging.handlers.CMRESHandler',
-            'hosts': [{'host': ES_HOST, 'port': ES_PORT}],
-            'auth_type': CMRESHandler.AuthType.NO_AUTH,
-            'es_index_name': 'error-logs',
-            'use_ssl': False,
-            'raise_on_indexing_exceptions': True,
+            'class': 'storage.log_handlers.ErrorLogElasticsearchHandler',
+            'formatter': 'verbose',
+            'index_name': 'error-logs',
+            'mapping': ERROR_LOG_MAPPING,
         },
     },
     'loggers': {
@@ -206,7 +217,7 @@ LOGGING = {
             'level': 'ERROR',
             'propagate': True,
         },
-        'audit': {
+        'audit_logger': {
             'handlers': ['audit_elasticsearch', 'console'],
             'level': 'INFO',
             'propagate': False,
@@ -220,5 +231,11 @@ LOGGING = {
     'root': {
         'handlers': ['console'],
         'level': 'WARNING',
+    },
+}
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
     },
 }

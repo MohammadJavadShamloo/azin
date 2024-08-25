@@ -1,16 +1,26 @@
 import logging
+
+import boto3
+from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError
-from storage import boto_client
+from django.conf import settings
+
 from storage.error_map import ERROR_MAP, DEFAULT_ERROR_MESSAGE
 
-audit_logger = logging.getLogger('audit')
+audit_logger = logging.getLogger('audit_logger')
 error_logger = logging.getLogger('error_logger')
 
 
 class S3Facade:
     def __init__(self):
         try:
-            self.s3_client = boto_client
+            self.s3_client = boto3.client(
+                's3',
+                endpoint_url=settings.S3_ENDPOINT_URL,
+                aws_access_key_id=settings.S3_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.S3_SECRET_ACCESS_KEY,
+                config=Config(signature_version='s3v4')
+            )
             audit_logger.info(f"Initialized S3 client")
         except BotoCoreError as e:
             error_logger.error(f"Failed to initialize S3 client: {str(e)}")
@@ -120,12 +130,6 @@ class S3Facade:
     def create_link(self, bucket_name, source_object_name, target_object_name):
         """Create a metadata-based symbolic link (reference) to another file within the same bucket."""
         try:
-            # Retrieve the original object's metadata (optional, for reference purposes)
-            original_metadata = self.s3_client.head_object(
-                Bucket=bucket_name,
-                Key=source_object_name
-            )['Metadata']
-
             # Create the link object with metadata pointing to the original object
             self.s3_client.put_object(
                 Bucket=bucket_name,
