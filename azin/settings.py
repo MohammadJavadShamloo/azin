@@ -136,13 +136,16 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
-STATIC_ROOT = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles/'
+STATICFILES_DIRS = [BASE_DIR / 'static', ]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+APPEND_SLASH = False
 
 ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
 ACCOUNT_CHANGE_EMAIL = True
@@ -178,6 +181,10 @@ S3_SECRET_ACCESS_KEY = env.str('S3_SECRET_ACCESS_KEY')
 
 ES_HOST = env.str('ES_HOST')
 ES_PORT = env.str('ES_PORT')
+ES_AUDIT_LOG_INDEX = 'audit-logs'
+ES_ERROR_LOG_INDEX = 'error-logs'
+ES_USER_USAGE_INDEX = 'usage_index'
+ES_FILE_HASH_INDEX = 'hash_index'
 
 LOGGING = {
     'version': 1,
@@ -231,11 +238,5 @@ LOGGING = {
     'root': {
         'handlers': ['console'],
         'level': 'WARNING',
-    },
-}
-
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
     },
 }

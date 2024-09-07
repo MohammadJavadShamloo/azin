@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}User Usage Report{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h2>User Usage Report</h2>
+        <div id="user-usage">
+            <!-- User usage data will be loaded here -->
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const userId = "{{ user_id|default:'' }}";
+            const url = userId ? `/admin/reports/user-usage/${userId}/` : '/admin/reports/user-usage/';
+
+            fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    const usageContainer = document.getElementById('user-usage');
+                    usageContainer.innerHTML = '';
+
+                    if (Array.isArray(data)) {
+                        data.forEach(user => {
+                            const userCard = `
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">User: ${user.user_id}</h5>
+                                <p class="card-text">Total Size: ${user.total_size} bytes</p>
+                                <p class="card-text">File Count: ${user.file_count}</p>
+                            </div>
+                        </div>`;
+                            usageContainer.innerHTML += userCard;
+                        });
+                    } else {
+                        usageContainer.innerHTML = `
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">User: ${data.user_id}</h5>
+                            <p class="card-text">Total Size: ${data.total_size} bytes</p>
+                            <p class="card-text">File Count: ${data.file_count}</p>
+                        </div>
+                    </div>`;
+                    }
+                })
+                .catch(error => {
+                    const usageContainer = document.getElementById('user-usage');
+                    usageContainer.innerHTML = `<div class="alert alert-danger">Error loading user usage data: ${error.message}</div>`;
+                });
+        });
+    </script>
+{% endblock %}

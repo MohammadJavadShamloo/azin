@@ -1,127 +1,137 @@
 import logging
 
-from elasticsearch import Elasticsearch, NotFoundError, ApiError
+from django.conf import settings
+from elasticsearch import Elasticsearch, helpers, ApiError
 
-from azin.settings import ES_HOST, ES_PORT
 from storage.es_mappings import ES_SETTINGS
 
 audit_logger = logging.getLogger('audit_logger')
 error_logger = logging.getLogger('error_logger')
 
 
-class ElasticsearchFacade:
+class ESFacade:
     def __init__(self):
-        try:
-            self.es_client = Elasticsearch(hosts=f'http://{ES_HOST}:{ES_PORT}')
-            audit_logger.info("Initialized Elasticsearch client.")
-        except ApiError as e:
-            error_logger.error(f"Failed to initialize Elasticsearch client: {str(e)}")
-            raise
+        self.es_client = Elasticsearch(hosts=f"http://{settings.ES_HOST}:{settings.ES_PORT}")
 
-    def create_index(self, index_name, es_settings=ES_SETTINGS, es_mappings=None):
-        """Create an index in Elasticsearch."""
+    def create_index(self, index_name, es_mappings=None, es_settings=ES_SETTINGS):
+        """Creates an Elasticsearch index with optional mappings and settings."""
         try:
-            body = {'settings': es_settings}
-            if es_mappings:
-                body['mappings'] = es_mappings
-
-            response = self.es_client.indices.create(index=index_name, body=body)
-            audit_logger.info(f"Index '{index_name}' created with settings: {es_settings}, mappings: {es_mappings}")
-            return response
+            if not self.es_client.indices.exists(index=index_name):
+                self.es_client.indices.create(index=index_name, body={
+                    'mappings': es_mappings or {},
+                    'settings': es_settings
+                })
+                audit_logger.info(f"Index {index_name} created successfully.")
+            else:
+                audit_logger.info(f"Index {index_name} already exists.")
         except ApiError as e:
-            error_logger.error(f"Failed to create index '{index_name}': {str(e)}")
-            raise
-
-    def index_document(self, index_name, document, doc_id=None):
-        """Index a document in Elasticsearch."""
-        try:
-            response = self.es_client.index(index=index_name, id=doc_id, body=document)
-            audit_logger.info(f"Document indexed in '{index_name}' with ID: {doc_id}")
-            return response
-        except ApiError as e:
-            error_logger.error(f"Failed to index document in '{index_name}' with ID {doc_id}: {str(e)}")
-            raise
-
-    def get_document(self, index_name, doc_id):
-        """Retrieve a document from Elasticsearch by ID."""
-        try:
-            response = self.es_client.get(index=index_name, id=doc_id)
-            audit_logger.info(f"Document retrieved from '{index_name}' with ID: {doc_id}")
-            return response
-        except NotFoundError:
-            error_logger.error(f"Document not found in '{index_name}' with ID: {doc_id}")
-            return None
-        except ApiError as e:
-            error_logger.error(f"Failed to retrieve document from '{index_name}' with ID {doc_id}: {str(e)}")
-            raise
-
-    def search(self, index_name, query, size=10):
-        """Search for documents in an index."""
-        try:
-            response = self.es_client.search(index=index_name, body=query, size=size)
-            audit_logger.info(f"Search performed on index '{index_name}' with query: {query}")
-            return response
-        except ApiError as e:
-            error_logger.error(f"Failed to perform search on index '{index_name}': {str(e)}")
-            raise
-
-    def delete_document(self, index_name, doc_id):
-        """Delete a document from Elasticsearch by ID."""
-        try:
-            response = self.es_client.delete(index=index_name, id=doc_id)
-            audit_logger.info(f"Document with ID {doc_id} deleted from index '{index_name}'")
-            return response
-        except NotFoundError:
-            error_logger.error(f"Document not found in '{index_name}' with ID: {doc_id}")
-            return None
-        except ApiError as e:
-            error_logger.error(f"Failed to delete document from '{index_name}' with ID {doc_id}: {str(e)}")
+            error_logger.error(f"Error creating index {index_name}: {str(e)}")
             raise
 
     def delete_index(self, index_name):
-        """Delete an index from Elasticsearch."""
+        """Deletes an Elasticsearch index."""
         try:
-            response = self.es_client.indices.delete(index=index_name, ignore=[400, 404])
-            audit_logger.info(f"Index '{index_name}' deleted.")
-            return response
+            if self.es_client.indices.exists(index=index_name):
+                self.es_client.indices.delete(index=index_name)
+                audit_logger.info(f"Index {index_name} deleted successfully.")
+            else:
+                audit_logger.info(f"Index {index_name} does not exist.")
         except ApiError as e:
-            error_logger.error(f"Failed to delete index '{index_name}': {str(e)}")
+            error_logger.error(f"Error deleting index {index_name}: {str(e)}")
             raise
 
-    def update_document(self, index_name, doc_id, update_body):
-        """Update a document in Elasticsearch."""
+    def index_document(self, index_name, doc_id, document):
+        """Indexes a single document into the specified index."""
         try:
-            response = self.es_client.update(index=index_name, id=doc_id, body={"doc": update_body})
-            audit_logger.info(f"Document with ID {doc_id} updated in index '{index_name}'")
-            return response
+            self.es_client.index(index=index_name, id=doc_id, body=document)
+            audit_logger.info(f"Document indexed in {index_name} successfully.")
         except ApiError as e:
-            error_logger.error(f"Failed to update document in '{index_name}' with ID {doc_id}: {str(e)}")
+            error_logger.error(f"Error indexing document in {index_name}: {str(e)}")
             raise
 
-    def bulk_index(self, index_name, documents):
-        """Bulk index multiple documents into Elasticsearch."""
+    def get_document(self, index_name, doc_id):
+        """Retrieves a document by ID from the specified index."""
         try:
-            actions = []
-            for document in documents:
-                action = {
-                    "_op_type": "index",
-                    "_index": index_name,
-                    "_source": document.get('doc')
-                }
-                actions.append(action)
-            response = self.es_client.bulk(body=actions)
-            audit_logger.info(f"Bulk indexed documents into index '{index_name}'")
-            return response
+            response = self.es_client.get(index=index_name, id=doc_id)
+            audit_logger.info(f"Document {doc_id} retrieved from {index_name} successfully.")
+            return response['_source']
         except ApiError as e:
-            error_logger.error(f"Failed to bulk index documents into '{index_name}': {str(e)}")
+            error_logger.error(f"Error retrieving document {doc_id} from {index_name}: {str(e)}")
+            raise
+
+    def update_document(self, index_name, doc_id, update_fields):
+        """Updates specific fields of a document in the specified index."""
+        try:
+            self.es_client.update(index=index_name, id=doc_id, body={'doc': update_fields})
+            audit_logger.info(f"Document {doc_id} updated in {index_name} successfully.")
+        except ApiError as e:
+            error_logger.error(f"Error updating document {doc_id} in {index_name}: {str(e)}")
+            raise
+
+    def delete_document(self, index_name, doc_id):
+        """Deletes a document by ID from the specified index."""
+        try:
+            self.es_client.delete(index=index_name, id=doc_id)
+            audit_logger.info(f"Document {doc_id} deleted from {index_name} successfully.")
+        except ApiError as e:
+            error_logger.error(f"Error deleting document {doc_id} from {index_name}: {str(e)}")
+            raise
+
+    def bulk_index_documents(self, index_name, documents):
+        """Performs a bulk index operation for multiple documents."""
+        try:
+            actions = [
+                {
+                    '_op_type': 'index',
+                    '_index': index_name,
+                    '_id': doc['id'],
+                    '_source': doc['body']
+                } for doc in documents
+            ]
+            helpers.bulk(self.es_client, actions)
+            audit_logger.info(f"Bulk index operation completed successfully for index {index_name}.")
+        except ApiError as e:
+            error_logger.error(f"Error performing bulk index operation in {index_name}: {str(e)}")
+            raise
+
+    def bulk_update_documents(self, index_name, documents):
+        """Performs a bulk update operation for multiple documents."""
+        try:
+            actions = [
+                {
+                    '_op_type': 'update',
+                    '_index': index_name,
+                    '_id': doc['id'],
+                    'doc': doc['body']
+                } for doc in documents
+            ]
+            helpers.bulk(self.es_client, actions)
+            audit_logger.info(f"Bulk update operation completed successfully for index {index_name}.")
+        except ApiError as e:
+            error_logger.error(f"Error performing bulk update operation in {index_name}: {str(e)}")
+            raise
+
+    def bulk_delete_documents(self, index_name, doc_ids):
+        """Performs a bulk delete operation for multiple documents."""
+        try:
+            actions = [
+                {
+                    '_op_type': 'delete',
+                    '_index': index_name,
+                    '_id': doc_id
+                } for doc_id in doc_ids
+            ]
+            helpers.bulk(self.es_client, actions)
+            audit_logger.info(f"Bulk delete operation completed successfully for index {index_name}.")
+        except ApiError as e:
+            error_logger.error(f"Error performing bulk delete operation in {index_name}: {str(e)}")
             raise
 
     def refresh_index(self, index_name):
-        """Refresh an index in Elasticsearch."""
+        """Refreshes an Elasticsearch index to make recent changes searchable."""
         try:
-            response = self.es_client.indices.refresh(index=index_name)
-            audit_logger.info(f"Index '{index_name}' refreshed.")
-            return response
+            self.es_client.indices.refresh(index=index_name)
+            audit_logger.info(f"Index {index_name} refreshed successfully.")
         except ApiError as e:
-            error_logger.error(f"Failed to refresh index '{index_name}': {str(e)}")
+            error_logger.error(f"Error refreshing index {index_name}: {str(e)}")
             raise

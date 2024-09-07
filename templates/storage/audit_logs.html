@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}Audit Logs - Cloud Storage Service{% endblock %}
+
+{% block content %}
+    <div class="container mt-4">
+        <h2>Audit Logs</h2>
+        <p class="lead">View the actions performed by users on the cloud storage system.</p>
+
+        {% if logs %}
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    <th scope="col">Timestamp</th>
+                    <th scope="col">User</th>
+                    <th scope="col">Action</th>
+                    <th scope="col">Resource</th>
+                    <th scope="col">Message</th>
+                    <th scope="col">Details</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for log in logs %}
+                    <tr>
+                        <!-- Convert timestamp to a human-readable date -->
+                        <td>{{ log.timestamp|date:"Y-m-d H:i:s" }}</td>
+                        <td>{{ log.user|default:"System" }}</td>
+                        <td>{{ log.action|default:"N/A" }}</td>
+                        <td>{{ log.resource|default:"N/A" }}</td>
+                        <td>{{ log.message|default:"N/A" }}</td>
+                        <td>
+                            {% if log.details %}
+                                <button class="btn btn-link" data-bs-toggle="collapse"
+                                        data-bs-target="#details-{{ forloop.counter }}">
+                                    View Details
+                                </button>
+                                <div id="details-{{ forloop.counter }}" class="collapse">
+                                    <pre>{{ log.details|default:"No additional details." }}</pre>
+                                </div>
+                            {% else %}
+                                No details
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No audit logs available at the moment.</p>
+        {% endif %}
+    </div>
+{% endblock %}

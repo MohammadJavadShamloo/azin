@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}Error Logs{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h2>Error Logs</h2>
+        <table class="table table-striped">
+            <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Level</th>
+                <th>Message</th>
+                <th>Exception</th>
+                <th>Stack Trace</th>
+                <th>Context</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for log in logs %}
+                <tr>
+                    <td>{{ log.timestamp|date:"Y-m-d H:i:s" }}</td>
+                    <td>{{ log.level }}</td>
+                    <td>{{ log.message }}</td>
+                    <td>{{ log.exception }}</td>
+                    <td>{{ log.stack_trace }}</td>
+                    <td>{{ log.context }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

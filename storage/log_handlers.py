@@ -1,9 +1,7 @@
 import logging
-
-from django.conf import settings
-from elasticsearch import Elasticsearch
-
 from datetime import datetime
+
+from elasticsearch import Elasticsearch
 
 from azin.settings import ES_HOST, ES_PORT
 from storage.es_mappings import AUDIT_LOG_MAPPING, ERROR_LOG_MAPPING
