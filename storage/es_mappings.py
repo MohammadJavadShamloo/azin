@@ -1,6 +1,6 @@
 AUDIT_LOG_MAPPING = {
     "properties": {
-        "timestamp": {"type": "date"},
+        "timestamp": {"type": "date", "format": "strict_date_optional_time||epoch_millis"},
         "user": {"type": "keyword"},
         "action": {"type": "keyword"},
         "resource": {"type": "keyword"},
@@ -11,7 +11,7 @@ AUDIT_LOG_MAPPING = {
 
 ERROR_LOG_MAPPING = {
     "properties": {
-        "timestamp": {"type": "date"},
+        "timestamp": {"type": "date", "format": "strict_date_optional_time||epoch_millis"},
         "level": {"type": "keyword"},
         "message": {"type": "text"},
         "exception": {"type": "text"},
@@ -27,7 +27,7 @@ HASH_INDEX_MAPPING = {
         "user_id": {"type": "text", "index": True},
         "filename": {"type": "keyword", "index": True},
         "folder_path": {"type": "text"},
-        "creation_date": {"type": "date", "format": "epoch_millis"},
+        "creation_date": {"type": "date", "format": "strict_date_optional_time||epoch_millis"},
         "size": {"type": "long"},
         "file_type": {"type": "keyword"}
     }

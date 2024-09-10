@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 
 from elasticsearch import Elasticsearch
 
@@ -25,16 +24,9 @@ class AuditLogElasticsearchHandler(logging.Handler):
             self.client.indices.create(index=self.index_name, body={"mappings": self.mapping})
 
     def emit(self, record):
-        log_entry = self.format(record)
-        doc = {
-            "timestamp": datetime.now().timestamp(),
-            "user": getattr(record, "user", None),
-            "action": getattr(record, "action", None),
-            "resource": getattr(record, "resource", None),
-            "message": record.getMessage(),
-            "details": getattr(record, "details", None)
-        }
-        self.client.index(index=self.index_name, body=doc)
+        if not isinstance(record.msg, dict):
+            return
+        self.client.index(index=self.index_name, body=record.msg)
 
 
 class ErrorLogElasticsearchHandler(logging.Handler):
@@ -55,13 +47,6 @@ class ErrorLogElasticsearchHandler(logging.Handler):
             self.client.indices.create(index=self.index_name, body={"mappings": self.mapping})
 
     def emit(self, record):
-        log_entry = self.format(record)
-        doc = {
-            "timestamp": datetime.now().timestamp(),
-            "level": record.levelname,
-            "message": record.getMessage(),
-            "exception": getattr(record, "exception", None),
-            "stack_trace": getattr(record, "stack_trace", None),
-            "context": getattr(record, "context", None)
-        }
-        self.client.index(index=self.index_name, body=doc)
+        if not isinstance(record.msg, dict):
+            return
+        self.client.index(index=self.index_name, body=record.msg)

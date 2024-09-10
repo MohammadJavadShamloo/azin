@@ -1,64 +1,62 @@
 {% extends 'base.html' %}
 
-{% block title %}User Usage Report{% endblock %}
+{% block title %}User Usage Report - Cloud Storage Service{% endblock %}
 
 {% block content %}
-    <div class="container">
+    <div class="container mt-4">
         <h2>User Usage Report</h2>
-        <div id="user-usage">
-            <!-- User usage data will be loaded here -->
-            <div class="text-center">
-                <div class="spinner-border" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-            </div>
-        </div>
+        <p class="lead">View the storage usage details of users in the system.</p>
+
+        {% if usage %}
+            <h3>Usage Details for {{ user_id }}</h3>
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>Total Size</th>
+                    <th>File Count</th>
+                    <th>Upload Count</th>
+                    <th>Delete Count</th>
+                    <th>Last Activity Date</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>{{ usage.total_size }} bytes</td>
+                    <td>{{ usage.file_count }}</td>
+                    <td>{{ usage.upload_count }}</td>
+                    <td>{{ usage.delete_count }}</td>
+                    <td>{{ usage.last_activity_date|date:"Y-m-d H:i:s" }}</td>
+                </tr>
+                </tbody>
+            </table>
+        {% elif all_users_usage %}
+            <h3>All Users Usage</h3>
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>User ID</th>
+                    <th>Total Size</th>
+                    <th>File Count</th>
+                    <th>Upload Count</th>
+                    <th>Delete Count</th>
+                    <th>Last Activity Date</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for user_usage in all_users_usage %}
+                    <tr>
+                        <td>{{ user_usage.user_id }}</td>
+                        <td>{{ user_usage.total_size }} bytes</td>
+                        <td>{{ user_usage.file_count }}</td>
+                        <td>{{ user_usage.upload_count }}</td>
+                        <td>{{ user_usage.delete_count }}</td>
+                        <td>{{ user_usage.last_activity_date|date:"Y-m-d H:i:s" }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No usage data available at the moment.</p>
+        {% endif %}
     </div>
-{% endblock %}
-
-{% block extra_js %}
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const userId = "{{ user_id|default:'' }}";
-            const url = userId ? `/admin/reports/user-usage/${userId}/` : '/admin/reports/user-usage/';
-
-            fetch(url, {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-                .then(response => response.json())
-                .then(data => {
-                    const usageContainer = document.getElementById('user-usage');
-                    usageContainer.innerHTML = '';
-
-                    if (Array.isArray(data)) {
-                        data.forEach(user => {
-                            const userCard = `
-                        <div class="card mb-3">
-                            <div class="card-body">
-                                <h5 class="card-title">User: ${user.user_id}</h5>
-                                <p class="card-text">Total Size: ${user.total_size} bytes</p>
-                                <p class="card-text">File Count: ${user.file_count}</p>
-                            </div>
-                        </div>`;
-                            usageContainer.innerHTML += userCard;
-                        });
-                    } else {
-                        usageContainer.innerHTML = `
-                    <div class="card">
-                        <div class="card-body">
-                            <h5 class="card-title">User: ${data.user_id}</h5>
-                            <p class="card-text">Total Size: ${data.total_size} bytes</p>
-                            <p class="card-text">File Count: ${data.file_count}</p>
-                        </div>
-                    </div>`;
-                    }
-                })
-                .catch(error => {
-                    const usageContainer = document.getElementById('user-usage');
-                    usageContainer.innerHTML = `<div class="alert alert-danger">Error loading user usage data: ${error.message}</div>`;
-                });
-        });
-    </script>
 {% endblock %}

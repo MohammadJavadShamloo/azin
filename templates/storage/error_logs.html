@@ -1,33 +1,103 @@
 {% extends 'base.html' %}
 
-{% block title %}Error Logs{% endblock %}
+{% block title %}Error Logs - Cloud Storage Service{% endblock %}
 
 {% block content %}
-    <div class="container">
+    <div class="container mt-4">
         <h2>Error Logs</h2>
-        <table class="table table-striped">
-            <thead>
-            <tr>
-                <th>Timestamp</th>
-                <th>Level</th>
-                <th>Message</th>
-                <th>Exception</th>
-                <th>Stack Trace</th>
-                <th>Context</th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for log in logs %}
+        <p class="lead">Search and view error logs from the system.</p>
+
+        <!-- Search Form -->
+        <form method="GET" action="{% url 'error_logs' %}">
+            <div class="input-group mb-3">
+                <input type="text" name="q" class="form-control" placeholder="Enter search term..."
+                       value="{{ search_term }}" aria-label="Search Term" aria-describedby="button-search">
+                <button class="btn btn-primary" type="submit" id="button-search">Search</button>
+            </div>
+        </form>
+
+        <!-- If logs exist, display them in a table -->
+        {% if logs %}
+            <p class="text-muted">Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ total_logs }}
+                logs.</p>
+            <table class="table table-hover">
+                <thead>
                 <tr>
-                    <td>{{ log.timestamp|date:"Y-m-d H:i:s" }}</td>
-                    <td>{{ log.level }}</td>
-                    <td>{{ log.message }}</td>
-                    <td>{{ log.exception }}</td>
-                    <td>{{ log.stack_trace }}</td>
-                    <td>{{ log.context }}</td>
+                    <th scope="col">Timestamp</th>
+                    <th scope="col">Level</th>
+                    <th scope="col">Message</th>
+                    <th scope="col">Exception</th>
+                    <th scope="col">Stack Trace</th>
+                    <th scope="col">Context</th>
                 </tr>
-            {% endfor %}
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                {% for log in logs %}
+                    <tr>
+                        <td>{{ log.timestamp }}</td>
+                        <td>{{ log.level }}</td>
+                        <td>{{ log.message|truncatechars:50 }}</td>
+                        <td>{{ log.exception|default:"N/A" }}</td>
+                        <td>
+                            {% if log.stack_trace %}
+                                <button class="btn btn-link" data-bs-toggle="collapse"
+                                        data-bs-target="#stack-trace-{{ forloop.counter }}">
+                                    View Stack Trace
+                                </button>
+                                <div id="stack-trace-{{ forloop.counter }}" class="collapse">
+                                    <pre>{{ log.stack_trace }}</pre>
+                                </div>
+                            {% else %}
+                                No stack trace
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.context %}
+                                <button class="btn btn-link" data-bs-toggle="collapse"
+                                        data-bs-target="#context-{{ forloop.counter }}">
+                                    View Context
+                                </button>
+                                <div id="context-{{ forloop.counter }}" class="collapse">
+                                    <pre>{{ log.context|default:"No additional context." }}</pre>
+                                </div>
+                            {% else %}
+                                No context
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Pagination Controls -->
+            <nav aria-label="Log Pagination">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?q={{ search_term }}&page={{ page_obj.previous_page_number }}"
+                               aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                    {% for num in page_obj.paginator.page_range %}
+                        <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                            <a class="page-link" href="?q={{ search_term }}&page={{ num }}">{{ num }}</a>
+                        </li>
+                    {% endfor %}
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?q={{ search_term }}&page={{ page_obj.next_page_number }}"
+                               aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% else %}
+            <!-- Display message if no logs found -->
+            <p class="text-muted">No error logs found.</p>
+        {% endif %}
     </div>
 {% endblock %}

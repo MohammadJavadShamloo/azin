@@ -10,7 +10,11 @@
                 File</a>
             <a href="{% url 'create_folder' %}?current_folder={{ current_folder }}" class="btn btn-secondary">Create
                 Folder</a>
+            {% if current_folder %}
+                <a href="{% url 'list_files' %}?current_folder={{ parent_folder }}" class="btn btn-secondary">Go Up</a>
+            {% endif %}
         </div>
+
         <table class="table table-striped">
             <thead>
             <tr>
@@ -28,7 +32,7 @@
                     <td>{{ item.size }}</td>
                     <td>
                         {% if item.type == "folder" %}
-                            <a href="{% url 'list_files' %}?current_folder={{ item.name }}" class="btn btn-sm btn-primary">Open</a>
+                            <a href="{% url 'list_files' %}?current_folder={{ current_folder }}/{{ item.name }}" class="btn btn-sm btn-primary">Open</a>
                             <a href="{% url 'delete_folder' %}?current_folder={{ current_folder }}&folder={{ item.name }}" class="btn btn-sm btn-danger">Delete</a>
                         {% elif item.type == 'file' %}
                             <a href="{% url 'download_file' %}?current_folder={{ current_folder }}&file={{ item.name }}" class="btn btn-sm btn-success">Download</a>

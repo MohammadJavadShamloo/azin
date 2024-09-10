@@ -5,9 +5,21 @@
 {% block content %}
     <div class="container mt-4">
         <h2>Audit Logs</h2>
-        <p class="lead">View the actions performed by users on the cloud storage system.</p>
+        <p class="lead">Search and view audit logs from the system.</p>
 
+        <!-- Search Form -->
+        <form method="GET" action="{% url 'audit_logs' %}">
+            <div class="input-group mb-3">
+                <input type="text" name="q" class="form-control" placeholder="Enter search term..."
+                       value="{{ search_term }}" aria-label="Search Term" aria-describedby="button-search">
+                <button class="btn btn-primary" type="submit" id="button-search">Search</button>
+            </div>
+        </form>
+
+        <!-- If logs exist, display them in a table -->
         {% if logs %}
+            <p class="text-muted">Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ total_logs }}
+                logs.</p>
             <table class="table table-hover">
                 <thead>
                 <tr>
@@ -22,8 +34,7 @@
                 <tbody>
                 {% for log in logs %}
                     <tr>
-                        <!-- Convert timestamp to a human-readable date -->
-                        <td>{{ log.timestamp|date:"Y-m-d H:i:s" }}</td>
+                        <td>{{ log.timestamp }}</td>
                         <td>{{ log.user|default:"System" }}</td>
                         <td>{{ log.action|default:"N/A" }}</td>
                         <td>{{ log.resource|default:"N/A" }}</td>
@@ -45,8 +56,35 @@
                 {% endfor %}
                 </tbody>
             </table>
+
+            <!-- Pagination Controls -->
+            <nav aria-label="Log Pagination">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?q={{ search_term }}&page={{ page_obj.previous_page_number }}"
+                               aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                    {% for num in page_obj.paginator.page_range %}
+                        <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                            <a class="page-link" href="?q={{ search_term }}&page={{ num }}">{{ num }}</a>
+                        </li>
+                    {% endfor %}
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?q={{ search_term }}&page={{ page_obj.next_page_number }}"
+                               aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
         {% else %}
-            <p>No audit logs available at the moment.</p>
+            <p class="text-muted">No audit logs found.</p>
         {% endif %}
     </div>
 {% endblock %}

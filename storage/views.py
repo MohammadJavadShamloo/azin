@@ -1,6 +1,7 @@
 import os
 
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.core.paginator import Paginator
 from django.http import HttpResponseNotFound, HttpResponseBadRequest
 from django.shortcuts import render, redirect
 from django.urls import reverse
@@ -17,14 +18,20 @@ class FileListView(LoginRequiredMixin, View):
     template_name = 'storage/list_files.html'
 
     def get(self, request, *args, **kwargs):
-        current_folder = request.GET.get('current_folder', '')
+        current_folder = request.GET.get('current_folder', '').lstrip('/').rstrip('/')
         bucket_name = request.user.username
 
         files_and_folders = storage_facade.read_object(bucket_name, current_folder)
 
+        if current_folder.count('/') < 1:
+            parent_folder = ''
+        else:
+            parent_folder = '/'.join(current_folder.split('/')[:-1])
+
         context = {
             'files_and_folders': files_and_folders,
-            'current_folder': current_folder
+            'current_folder': current_folder,
+            'parent_folder': parent_folder
         }
 
         return render(request, self.template_name, context)
@@ -82,6 +89,31 @@ class FileDownloadView(LoginRequiredMixin, View):
             return HttpResponseNotFound(f"File not found: {str(e)}")
 
 
+class FileSearchView(LoginRequiredMixin, View):
+    template_name = 'storage/file_search.html'
+    paginate_by = 20
+
+    def get(self, request, *args, **kwargs):
+        search_term = request.GET.get('q', '')
+        page_number = int(request.GET.get('page', 1))
+
+        try:
+            search_results = storage_facade.search_object(self.request.user.username,
+                                                          search_term) if search_term else []
+
+            paginator = Paginator(search_results, self.paginate_by)
+            page_obj = paginator.get_page(page_number)
+
+            return render(request, self.template_name, {
+                'files': page_obj.object_list,
+                'page_obj': page_obj,
+                'search_term': search_term,
+                'total_files': len(search_results),
+            })
+        except Exception as e:
+            return HttpResponseBadRequest(f"Error searching files: {str(e)}")
+
+
 class FolderCreateView(LoginRequiredMixin, View):
     template_name = 'storage/create_folder.html'
 
@@ -126,28 +158,60 @@ class FolderDeleteView(LoginRequiredMixin, View):
 
 class AuditLogView(LoginRequiredMixin, PermissionRequiredMixin, View):
     template_name = 'storage/audit_logs.html'
+    paginate_by = 20
 
     def has_permission(self):
         return self.request.user.is_superuser
 
     def get(self, request, *args, **kwargs):
+        search_term = request.GET.get('q', '')
         try:
-            logs = report_facade.get_audit_logs(size=100)
-            return render(request, self.template_name, {'logs': logs})
+            page_number = int(request.GET.get('page', 1))
+
+            if not search_term:
+                logs = report_facade.get_audit_logs()
+            else:
+                logs = report_facade.search_audit_logs(search_term=search_term)
+
+            paginator = Paginator(logs, self.paginate_by)
+            page_obj = paginator.get_page(page_number)
+
+            return render(request, self.template_name, {
+                'logs': page_obj.object_list,
+                'page_obj': page_obj,
+                'total_logs': len(logs),
+                'search_term': search_term
+            })
         except Exception as e:
             return HttpResponseBadRequest(f"Error retrieving audit logs: {str(e)}")
 
 
 class ErrorLogView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    template_name = 'reports/error_logs.html'
+    template_name = 'storage/error_logs.html'
+    paginate_by = 20
 
     def has_permission(self):
         return self.request.user.is_superuser
 
     def get(self, request, *args, **kwargs):
+        search_term = request.GET.get('q', '')
         try:
-            logs = report_facade.get_error_logs(size=100)
-            return render(request, self.template_name, {'logs': logs})
+            page_number = int(request.GET.get('page', 1))
+
+            if not search_term:
+                logs = report_facade.get_error_logs()
+            else:
+                logs = report_facade.search_error_logs(search_term=search_term)
+
+            paginator = Paginator(logs, self.paginate_by)
+            page_obj = paginator.get_page(page_number)
+
+            return render(request, self.template_name, {
+                'logs': page_obj.object_list,
+                'page_obj': page_obj,
+                'total_logs': len(logs),
+                'search_term': search_term
+            })
         except Exception as e:
             return HttpResponseBadRequest(f"Error retrieving error logs: {str(e)}")
 
@@ -160,48 +224,7 @@ class UserUsageReportView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
     def get(self, request, *args, **kwargs):
         try:
-            user_id = kwargs.get('user_id', None)
-            if user_id:
-                usage = report_facade.get_user_usage(user_id)
-                return render(request, self.template_name, {'usage': usage, 'user_id': user_id})
-            else:
-                all_users_usage = report_facade.get_all_users_usage()
-                return render(request, self.template_name, {'all_users_usage': all_users_usage})
+            usage = report_facade.get_user_usage(self.request.user.username)
+            return render(request, self.template_name, {'usage': usage, 'user_id': self.request.user.username})
         except Exception as e:
             return HttpResponseBadRequest(f"Error retrieving user usage: {str(e)}")
-
-
-class SearchAuditLogsView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    template_name = 'reports/audit_logs.html'
-
-    def has_permission(self):
-        return self.request.user.is_superuser
-
-    def get(self, request, *args, **kwargs):
-        search_term = request.GET.get('q', None)
-        if search_term:
-            try:
-                logs = report_facade.search_audit_logs(search_term=search_term, size=100)
-                return render(request, self.template_name, {'logs': logs, 'search_term': search_term})
-            except Exception as e:
-                return HttpResponseBadRequest(f"Error searching audit logs: {str(e)}")
-        else:
-            return HttpResponseBadRequest("Please provide a search term.")
-
-
-class SearchErrorLogsView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    template_name = 'reports/error_logs.html'
-
-    def has_permission(self):
-        return self.request.user.is_superuser
-
-    def get(self, request, *args, **kwargs):
-        search_term = request.GET.get('q', None)
-        if search_term:
-            try:
-                logs = report_facade.search_error_logs(search_term=search_term, size=100)
-                return render(request, self.template_name, {'logs': logs, 'search_term': search_term})
-            except Exception as e:
-                return HttpResponseBadRequest(f"Error searching error logs: {str(e)}")
-        else:
-            return HttpResponseBadRequest("Please provide a search term.")
