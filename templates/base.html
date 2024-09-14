@@ -27,6 +27,11 @@
             <ul class="navbar-nav ms-auto">
                 {% if user.is_authenticated %}
                     <li class="nav-item dropdown">
+                        <a class="nav-link" href="{% url 'user_usage_detail' request.user.username %}" role="button">
+                            My Usage
+                        </a>
+                    </li>
+                    <li class="nav-item dropdown">
                         <a class="nav-link" href="{% url 'list_files' %}" role="button">
                             Explore
                         </a>
@@ -38,6 +43,11 @@
                     </li>
                 {% endif %}
                 {% if user.is_staff %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link" href="{% url 'user_usage' %}" role="button">
+                            All Usage
+                        </a>
+                    </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarLogsDropdown" role="button"
                            data-bs-toggle="dropdown" aria-expanded="false">

@@ -216,11 +216,8 @@ class ErrorLogView(LoginRequiredMixin, PermissionRequiredMixin, View):
             return HttpResponseBadRequest(f"Error retrieving error logs: {str(e)}")
 
 
-class UserUsageReportView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    template_name = 'reports/user_usage.html'
-
-    def has_permission(self):
-        return self.request.user.is_superuser
+class UserUsageReportView(LoginRequiredMixin, View):
+    template_name = 'storage/user_usage.html'
 
     def get(self, request, *args, **kwargs):
         try:
